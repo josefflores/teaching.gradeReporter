@@ -33,11 +33,11 @@ function onOpen() {
 function loadMenu(debug) {
     var menu;
 
-    menu = SpreadsheetApp.getUi();
+    menu = SpreadsheetApp.getUi()
+        .createMenu('Teaching');
 
     // Generate program options
-    menu.createMenu('Teaching')
-        .addItem('Send grades to all student rows', 'sendGradesAll')
+    menu.addItem('Send grades to all student rows', 'sendGradesAll')
         .addItem('Send grade to individual student by row', 'sendGradesSelect')
         .addSeparator();
 
@@ -82,7 +82,7 @@ function resetDebug() {
     userProp.deleteProperty(g_debugEmail_key);
     userProp.deleteProperty(g_debug_key);
 
-    //  Ne default properties, will cause reset
+    //  New default properties, will cause reset
     setDefaults();
     loadMenu(userProp.getProperty(g_debug_key));
 }
@@ -211,8 +211,9 @@ function getFirstWrittenRow(col) {
  * @returns                     The letter equivilance of the column index.
  */
 function columnToLetter(col) {
-    var i, charOffset, letter = '';
+    var i, charOffset, letter;
 
+    letter = '';
     charOffset = 65;
     lettersInAlphabet = 26;
 
@@ -311,25 +312,28 @@ function sendEmail(obj) {
     //  Determine recipient
     if (obj.debug == 'true') {
         //  Debug mode
+        to = obj.debugEmail;
+    } else {
+        //  Production
         to = cell(sheet, [obj.cRanges.email,
             obj.student
         ].join(''));
-    } else {
-        //  Production
-        to = obj.debugEmail;
     }
 
     //  Make email heading
-    obj.subjectHeading = [obj.course,
+    obj.subjectHeading = [
+        obj.course,
         ' - ',
         obj.assignment
     ].join('');
 
     //  Send HTML email
-    GmailApp.sendEmail(to, obj.subjectHeading, null, {
-        htmlBody: obj.report(obj),
-        replyTo: obj.replyTo
-    });
+    GmailApp.sendEmail(to,
+        obj.subjectHeading,
+        null, {
+            htmlBody: obj.report(obj),
+            replyTo: obj.replyTo
+        });
 }
 
 /**
@@ -359,20 +363,27 @@ function makeGradeTable(obj) {
 
     //  Update info collection for the specified student
     Object.keys(info).forEach(function (key) {
-        info[key] = cell(sheet, [info[key], obj.student].join(''))
+        info[key] = cell(sheet, [
+            info[key],
+            obj.student
+        ].join(''))
     });
 
     //  Fetch ranges of label heading and scores body
     subGradesH = sheet.getRange([
-        obj.cRanges.subGrade[0] + obj.cRanges.header,
+        obj.cRanges.subGrade[0],
+        obj.cRanges.header,
         ':',
-        obj.cRanges.subGrade[1] + obj.cRanges.header
+        obj.cRanges.subGrade[1],
+        obj.cRanges.header
     ].join(''));
 
     subGradesB = sheet.getRange([
-        obj.cRanges.subGrade[0] + obj.student,
+        obj.cRanges.subGrade[0],
+        obj.student,
         ':',
-        obj.cRanges.subGrade[1] + obj.student
+        obj.cRanges.subGrade[1],
+        obj.student
     ].join(''));
 
     //  Prepare HTML
@@ -381,12 +392,17 @@ function makeGradeTable(obj) {
     css = ' style="border: 1px solid black; text-align: center;"';
     for (i = 1; i < subGradesH.getNumColumns(); ++i) {
         table.th += ['<th', css, '>',
-            subGradesH.getCell(1, i).getValue(),
+            subGradesH.getCell(1, i)
+            .getValue(),
+            //' (',
+            //cell(sheet, [obj.pointsRow, i].join(''),
+            //')',
             '</th>'
         ].join('');
 
         table.td += ['<td', css, '>',
-            subGradesB.getCell(1, i).getValue(),
+            subGradesB.getCell(1, i)
+            .getValue(),
             '</td>'
         ].join('');
     }
@@ -423,9 +439,6 @@ function makeGradeTable(obj) {
 function showPromptSingleStudent(obj) {
     var sheet, ui, query, studentRow, lName, fName;
 
-    //  Get spreadsheet
-    sheet = SpreadsheetApp.getActiveSheet();
-
     //  Get spreadsheet UI
     ui = SpreadsheetApp.getUi();
 
@@ -442,12 +455,21 @@ function showPromptSingleStudent(obj) {
             studentRow >= obj.cRanges.student[0] &&
             studentRow <= obj.cRanges.student[1]) {
 
+            //  Get spreadsheet
+            sheet = SpreadsheetApp.getActiveSheet();
+
             //  Get Student Name
-            lName = cell(sheet, 'A' + studentRow);
-            fName = cell(sheet, 'B' + studentRow);
+            lName = cell(sheet, ['A', studentRow].join(''));
+            fName = cell(sheet, ['B', studentRow].join(''));
 
             //  Success Message
-            return success(obj.appName, ['Emailing student ', lName, ', ', fName, '.'].join(''),
+            return success(obj.appName, [
+                    'Emailing student ',
+                    lName,
+                    ', ',
+                    fName,
+                    '.'
+                ].join(''),
                 studentRow);
         }
         //  Invalid Student
